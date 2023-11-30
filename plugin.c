@@ -2,6 +2,8 @@
 #include <geanyplugin.h>
 
 #include "lsp.h"
+#include "engines.h"
+
 
 static GtkWidget *main_menu_item;
 
@@ -286,12 +288,29 @@ static gboolean copilot_init(GeanyPlugin *plugin, gpointer pdata)
     geany_plugin_set_data(plugin, plugin, NULL);
  
  
-    node_pid = init_copilot_threads();
+    engine_info* engines = get_engines( );
+    
+    printf("Copilot Engine List: \n");
+    
+    for ( int i = 0; engines[i].version != 0 ; i++ ){
+        printf("  %s\n", engines[i].version );
+    }
+    
+    engine_info* selectet_engine = &engines[1];
+    
+    engines_write_engine_files( plugin, selectet_engine );
+ 
+    char engine_path[1024];
+    
+    snprintf( engine_path, sizeof( engine_path ), "%s/index.js", engines_get_path( plugin, selectet_engine ));
+    
+    
+    msgwin_msg_add(COLOR_BLACK, -1, NULL,"Copilot: init engine %s", selectet_engine->version  );
+    
+    node_pid = init_copilot_threads( engine_path );
     
     
     send_init_msg();
-    
-    
     
     send_setEditorInfo();
     
@@ -299,17 +318,13 @@ static gboolean copilot_init(GeanyPlugin *plugin, gpointer pdata)
     
     
     plugin_signal_connect( plugin, NULL, "document-open", TRUE, G_CALLBACK (on_document_open), NULL);
-    //plugin_signal_connect( plugin, NULL, "editor-notify", TRUE, G_CALLBACK (on_editor_notify), NULL);
 
-    
- 
-    
     
     return TRUE;
 }
 
 
-static PluginCallback demo_callbacks[] =
+static PluginCallback copilot_callbacks[] =
 {
 	/* Set 'after' (third field) to TRUE to run the callback @a after the default handler.
 	 * If 'after' is FALSE, the callback is run @a before the default handler, so the plugin
@@ -331,12 +346,17 @@ static void copilot_cleanup(GeanyPlugin *plugin, gpointer pdata)
     
     
 }
- 
+
 
  
 G_MODULE_EXPORT
 void geany_load_module(GeanyPlugin *plugin)
 {
+    
+    
+   
+   
+    
     
     plugin_me = plugin;
     
@@ -349,7 +369,7 @@ void geany_load_module(GeanyPlugin *plugin)
     /* Step 2: Set functions */
     plugin->funcs->init = copilot_init;
     plugin->funcs->cleanup = copilot_cleanup;
-    plugin->funcs->callbacks = demo_callbacks;
+    plugin->funcs->callbacks = copilot_callbacks;
 
     GeanyKeyGroup *key_group = plugin_set_key_group(plugin, "copilot", 1, NULL);
     keybindings_set_item(key_group, 0, kb_run_completition, 0, 0, "copilot run completition", _("Run the Copilot completition"),   main_menu_item);

@@ -364,18 +364,17 @@ void *copilot_read_thread(void *arg) {
 }
 
 
-pid_t init_copilot_threads( void ){
+pid_t init_copilot_threads( char* engine_path  ){
     
     pipe( copilot_stdin);
     pipe( copilot_stdout);
     
     //char* node_path = "/usr/bin/node";
     char* node_path = "/home/ramin/src/geany-copilot/node-v20.10.0-linux-x64/bin/node";
-      
-    //char *start_cmd[] = { node_path , "/home/ramin/src/geany-copilot/engines/1.133.0/index.js", NULL};
-    char *start_cmd[] = { node_path , "/home/ramin/src/geany-copilot/engines/1.138.0/index.js", NULL};
     
-
+    
+    char *start_cmd[] = { node_path , engine_path , NULL};
+    
 
     // Erstelle einen neuen Prozess
     pid_t pid = fork();
@@ -387,6 +386,8 @@ pid_t init_copilot_threads( void ){
     } else if (pid == 0) {
         
         //setenv("COPILOT_AGENT_VERBOSE", "1", 1);
+        
+        
         
         dup2( copilot_stdin[0],  0);
         dup2( copilot_stdout[1], 1);
