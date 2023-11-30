@@ -368,12 +368,14 @@ pid_t init_copilot_threads( void ){
     
     pipe( copilot_stdin);
     pipe( copilot_stdout);
-        
-      
-    //char *start_cmd[] = {"/usr/bin/node", "/home/ramin/src/geany-copilot/test1/copilot/index.js", NULL};
     
-    //char *start_cmd[] = {"/home/ramin/src/geany-copilot/chat/github-copilot-intellij/copilot-agent/bin/copilot-agent-linux", "--stdio", NULL };
-    char *start_cmd[] = {"/home/ramin/src/geany-copilot/chat/github-copilot-intellij/copilot-agent/bin/copilot-agent-linux", NULL };
+    //char* node_path = "/usr/bin/node";
+    char* node_path = "/home/ramin/src/geany-copilot/node-v20.10.0-linux-x64/bin/node";
+      
+    //char *start_cmd[] = { node_path , "/home/ramin/src/geany-copilot/engines/1.133.0/index.js", NULL};
+    char *start_cmd[] = { node_path , "/home/ramin/src/geany-copilot/engines/1.138.0/index.js", NULL};
+    
+
 
     // Erstelle einen neuen Prozess
     pid_t pid = fork();
