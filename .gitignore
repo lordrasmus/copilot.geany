@@ -17,3 +17,8 @@ test1/
 node-*
 copilot-*
 *.log
+
+.gdbinit
+custom.css
+gtk_test
+links.txt
