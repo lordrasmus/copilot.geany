@@ -1,1 +1,1 @@
-# geany-copilot
+# copilot.geany
