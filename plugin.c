@@ -124,11 +124,11 @@ static void getCompletions_func(){
         sci_end_undo_action( editor->sci );
         
         // kleiner hack weil der text select pro zeile um 1 zeichen zu kurz ist
-        for ( int i = 0 ; i < suggestion_len; i++ ){
+        /*for ( int i = 0 ; i < suggestion_len; i++ ){
             if ( suggestion[i] == '\n' ){
                 suggestion_add++;
             }
-        } 
+        } */
         
         #define SSM(s, m, w, l) scintilla_send_message(s, m, w, l)
         SSM( editor->sci, SCI_SETSEL, pos + suggestion_len + suggestion_add , pos);
