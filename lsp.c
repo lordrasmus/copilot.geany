@@ -141,14 +141,14 @@ void send_setEditorInfo( void ){
     
     
     
-    jsonreq_send_sync_and_free( ret_val, 0 );
+    jsonreq_send_sync_and_free( ret_val, 1 );
     
     unlock_copilot_api_mutex();
 
 }
 
 
-void send_getCompletions( const char* path, int version, int line, int character, int indent_width,  char** suggestion ){
+void send_getCompletions( const char* path, int version, int line, int character, int indent_width,  char** suggestion, int* start_line, int* start_char ){
     #if 0
     
     
@@ -269,17 +269,30 @@ void send_getCompletions( const char* path, int version, int line, int character
                     
                     const char* p = json_object_get_string(text_obj);
                     
-                    // kleiner hack bis ich rausgefunden habe warum copilot da immer 2 tabs am anfang macht
-                    while( 1 ){
-                        if ( *p == ' ' ){ p++ ; continue; }
-                        if ( *p == '\t' ){ p++ ; continue; }
-                        break;
-                    }
-                    
                     *suggestion = malloc( strlen( p ) + 1 );
                     strcpy( *suggestion, p );
                     
                 }
+                
+                struct json_object *range_obj;
+                if ( json_object_object_get_ex(array_element, "range", &range_obj) != 0 ){
+                    
+                    struct json_object *start_obj;
+                    if ( json_object_object_get_ex(range_obj, "start", &start_obj) != 0 ){
+                        
+                        struct json_object *line_obj;
+                        if ( json_object_object_get_ex(start_obj, "line", &line_obj) != 0 ){
+                            *start_line = json_object_get_int( line_obj );
+                        }   
+                        
+                        struct json_object *character_obj;
+                        if ( json_object_object_get_ex(start_obj, "character", &character_obj) != 0 ){
+                            *start_char = json_object_get_int( character_obj );
+                        }   
+                    
+                    }   
+                }
+                
             }
         }
     }
@@ -353,7 +366,7 @@ void send_textDocument_didOpen( char* path, char* content ){
     jsonreq_add_obj_str( textDocument,"uri",        "file://%s", path);
     jsonreq_add_obj_int( textDocument,"version",    0);
     jsonreq_add_obj_str( textDocument,"languageId", "c");
-    jsonreq_add_obj_str( textDocument,"text",       content );
+    jsonreq_add_obj_str( textDocument,"text",       "%s", content );
 
     
     jsonreq_send_async( ret_val, 1 );

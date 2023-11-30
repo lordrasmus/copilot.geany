@@ -59,26 +59,15 @@ static void item_activate_cb(GtkMenuItem *menuitem, gpointer user_data)
 
 static void on_document_open(GObject *obj, GeanyDocument *doc, gpointer user_data)
 {
-    printf("Example: %s was opened\n", DOC_FILENAME(doc));
     
-    //const GeanyIndentPrefs *iprefs  = editor_get_indent_prefs (doc->editor);
-    
-    //indentation.width
-    //indentation.type
-    
+    GeanyPlugin *plugin = user_data;
      
     gint   len  = sci_get_length(doc->editor->sci) + 1;
     gchar* text = sci_get_contents(doc->editor->sci, len);
-    
-    //printf("len: %d\n", len );
-    //printf("text : %s\n", paste_text );
         
-    send_textDocument_didOpen( DOC_FILENAME(doc) , text );
-    
-    
-    GeanyPlugin *plugin = user_data;
-    
     plugin_set_document_data( plugin , doc, "lsp_version", 0 );
+    
+    send_textDocument_didOpen( DOC_FILENAME(doc) , text );
     
 }
 
@@ -105,8 +94,10 @@ static void getCompletions_func(){
     long int version = (long)plugin_get_document_data( plugin , editor->document, "lsp_version");
         
     char *suggestion = 0;
-                
-    send_getCompletions( DOC_FILENAME(editor->document), version, line , line_pos, indents->width , &suggestion );
+    int start_line;
+    int start_char;
+    
+    send_getCompletions( DOC_FILENAME(editor->document), version, line , line_pos, indents->width , &suggestion, &start_line, &start_char );
     
     last_complitition_pos = pos;
     
@@ -116,9 +107,51 @@ static void getCompletions_func(){
         int suggestion_add =0;
         
         printf("    suggestion   %d    : >%s<\n", suggestion_len , suggestion );
+        printf("    start_line: %d\n", start_line);
+        printf("    start_char: %d\n", start_char);
+        
+        printf("    line    : %d\n", line);
+        printf("    pos     : %d\n", pos);
+        printf("    line_pos: %d\n", line_pos);
+        
+        
+        gint   len  = sci_get_length(doc->editor->sci) + 1;
+        gchar* text = sci_get_contents(doc->editor->sci, len);
+    
+        char *p = suggestion;
+        // sometimes the start of the suggestion is not the start of the line in the editor ( mostly 1 char ?? )
+        char *cur = &text[ pos - line_pos - 1 ];
+        
+        //printf(" cur text : >%s\n", cur );
+        
+        if ( start_char == 0 ){
+            
+            // this should find the first char in the current line which matches the suggestion
+            for ( int i = 0; i < 5 ; i++ ){
+                if ( *suggestion == cur[i] ){
+                    cur = &cur[i];
+                    printf( "   fixed cur text in editor position by %d bytes\n", i);
+                    break;
+                }
+            }
+            
+            for( int i = 0 ; suggestion[i] == cur[i] ; i++ ){
+                p++;
+            }
+        }
+        
+        suggestion_len = strlen( p );
+        
+        
+        // kleiner hack bis ich rausgefunden habe warum copilot da immer 2 tabs am anfang macht
+        /*while( 1 ){
+            if ( *p == ' ' ){ p++ ; continue; }
+            if ( *p == '\t' ){ p++ ; continue; }
+            break;
+        }*/
         
         sci_start_undo_action( editor->sci );
-        editor_insert_text_block( editor, suggestion, pos, 0, -1, 0 );
+        editor_insert_text_block( editor, p, pos, 0, -1, 0 );
         //editor_insert_snippet( editor, pos, suggestion );
         //editor_insert_snippet( editor, pos, suggestion );
         sci_end_undo_action( editor->sci );
@@ -139,7 +172,7 @@ static void getCompletions_func(){
          msgwin_status_add("Copilot: no completition offered");
     }
     
-    send_getPanelCompletions( DOC_FILENAME(editor->document), version, line , line_pos, indents->width , &suggestion );
+    //send_getPanelCompletions( DOC_FILENAME(editor->document), version, line , line_pos, indents->width , &suggestion );
     
    
 
@@ -296,7 +329,7 @@ static gboolean copilot_init(GeanyPlugin *plugin, gpointer pdata)
         printf("  %s\n", engines[i].version );
     }
     
-    engine_info* selectet_engine = &engines[1];
+    engine_info* selectet_engine = &engines[0];
     
     engines_write_engine_files( plugin, selectet_engine );
  
@@ -307,7 +340,7 @@ static gboolean copilot_init(GeanyPlugin *plugin, gpointer pdata)
     
     msgwin_msg_add(COLOR_BLACK, -1, NULL,"Copilot: init engine %s", selectet_engine->version  );
     
-    node_pid = init_copilot_threads( engine_path );
+    node_pid = init_copilot_threads( plugin, engine_path );
     
     
     send_init_msg();
@@ -317,8 +350,6 @@ static gboolean copilot_init(GeanyPlugin *plugin, gpointer pdata)
     send_initialized();
     
     
-    plugin_signal_connect( plugin, NULL, "document-open", TRUE, G_CALLBACK (on_document_open), NULL);
-
     
     return TRUE;
 }
@@ -329,6 +360,7 @@ static PluginCallback copilot_callbacks[] =
 	/* Set 'after' (third field) to TRUE to run the callback @a after the default handler.
 	 * If 'after' is FALSE, the callback is run @a before the default handler, so the plugin
 	 * can prevent Geany from processing the notification. Use this with care. */
+    { "document-open", (GCallback) &on_document_open, FALSE, NULL },
 	{ "editor-notify", (GCallback) &on_editor_notify, FALSE, NULL },
 	{ NULL, NULL, FALSE, NULL }
 };

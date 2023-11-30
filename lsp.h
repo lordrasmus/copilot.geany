@@ -17,7 +17,7 @@ void send_textDocument_didOpen( char* path, char* content );
 
 void send_textDocument_didChange( const char* path, int version, int line, int character, const char* text );
 
-void send_getCompletions( const char* path,int version, int line, int character, int indent_width, char** suggestion );
+void send_getCompletions( const char* path,int version, int line, int character, int indent_width, char** suggestion, int* start_line, int* start_char );
 void send_getPanelCompletions( const char* path, int version, int line, int character, int indent_width,  char** suggestion );
 
 #endif
