@@ -27,8 +27,6 @@ static void getCompletions_func();
 static void on_document_open(GObject *obj, GeanyDocument *doc, gpointer user_data)
 {
     
-    if ( copilot_engine_running() == 0 ) return;
-    
     GeanyPlugin *plugin = user_data;
      
     gint   len  = sci_get_length(doc->editor->sci) + 1;
@@ -173,7 +171,6 @@ static void kb_run_completition(G_GNUC_UNUSED guint key_id){
 static gboolean on_editor_notify(GObject *object, GeanyEditor *editor, SCNotification *nt, gpointer data){
     //printf("on_editor_notify\n");
     
-    if ( copilot_engine_running() == 0 ) return FALSE;
     
     GeanyPlugin *plugin = data;
     
@@ -363,14 +360,11 @@ static void copilot_cleanup(GeanyPlugin *plugin, gpointer pdata)
     GtkWidget *main_menu_item = (GtkWidget *) pdata;
     gtk_widget_destroy(main_menu_item);
     
-    if ( copilot_engine_running() == 1 ){
         
-        printf("Bye Copilot :-(\n");
+    printf("Bye Copilot :-(\n");
         
-        kill(node_pid, SIGTERM);
-        wait(NULL); 
-    }
-    
+    kill(node_pid, SIGTERM);
+    wait(NULL); 
     
 }
 

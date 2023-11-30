@@ -17,7 +17,6 @@ static int jsonrpc_log;
 
 static int next_id = 0;
 
-static int copilot_engine_running_status = 0;
 
 static int copilot_stdin[2];
 static int copilot_stdout[2];
@@ -37,9 +36,7 @@ json_object* get_last_result( void ){
     return last_result;
 }
 
-int copilot_engine_running( void ){
-    return 1; // copilot_engine_running_status;
-}
+
 
 void write_to_log( char* format, ... ){
     
@@ -438,8 +435,6 @@ pid_t init_copilot_threads( GeanyPlugin *plugin, char* node_path,  char* engine_
     } else if (pid == 0) {
         
         //setenv("COPILOT_AGENT_VERBOSE", "1", 1);
-        
-        copilot_engine_running_status = 1;
         
         dup2( copilot_stdin[0],  0);
         dup2( copilot_stdout[1], 1);

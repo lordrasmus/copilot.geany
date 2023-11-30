@@ -10,19 +10,16 @@
 void copilot_menu_item_activate_cb(GtkMenuItem *menuitem, gpointer user_data)
 {
     
-    #if 1
     char version[100] = { 0 };
     char runtimeVersion[100] = { 0 };
     char username[100] = { 0 };
     int signed_in = 0;
     
     
-    if ( copilot_engine_running() == 1 ){
     
-        send_checkStatus( &signed_in, username, sizeof( username ) );
+    send_checkStatus( &signed_in, username, sizeof( username ) );
     
-        send_getVersion( version, runtimeVersion );
-    }
+    send_getVersion( version, runtimeVersion );
     
     char show_text[1000];
     
@@ -47,45 +44,7 @@ void copilot_menu_item_activate_cb(GtkMenuItem *menuitem, gpointer user_data)
         
     
     dialogs_show_msgbox(GTK_MESSAGE_INFO,"%s", show_text);
-    
-    #else
-    
-    char *welcome_text = "Copilot Info";
-    
-    GtkWidget *dialog;
-	GeanyPlugin *plugin = user_data;
-	GeanyData *geany_data = plugin->geany_data;
-
-	dialog = gtk_message_dialog_new( GTK_WINDOW(geany_data->main_widgets->window), GTK_DIALOG_DESTROY_WITH_PARENT, GTK_MESSAGE_INFO, GTK_BUTTONS_OK,
-		"%s", welcome_text);
-        
-    gtk_window_set_title(GTK_WINDOW(dialog), "Copilot Infos");
-    
-     // Fortschrittsanzeige erstellen
-    GtkWidget *progress_bar = gtk_progress_bar_new();
-    gtk_progress_bar_set_fraction(GTK_PROGRESS_BAR(progress_bar), 0.0); // Initialer Fortschritt
-
-    // Dialog-Content hinzufügen
-    GtkWidget *content_area = gtk_dialog_get_content_area(GTK_DIALOG(dialog));
-    gtk_container_add(GTK_CONTAINER(content_area), progress_bar);
-
-    // Callback für Dialogantworten hinzufügen
-    //g_signal_connect(dialog, "response", G_CALLBACK(dialog_response_callback), NULL);
-
-    // Timer für Fortschrittsaktualisierung
-    //gdouble progress = 0.0;
-    //GtkWidget *timer = g_timeout_add(100, (GSourceFunc)gtk_progress_bar_pulse, progress_bar);
-    
-    plugin_timeout_add( plugin, 100, copilot_progress_run, progress_bar );
-
-
-        
-	//gtk_message_dialog_format_secondary_text(GTK_MESSAGE_DIALOG(dialog), _("(From the %s plugin)"), plugin->info->name);
-
-	gtk_dialog_run(GTK_DIALOG(dialog));
-	gtk_widget_destroy(dialog);
-    
-    #endif
+   
     
 }
 

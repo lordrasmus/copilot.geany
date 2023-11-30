@@ -43,6 +43,8 @@ void send_init_msg( void ){
     jsonreq_add_param_null(req, "workspaceFolders");
     jsonreq_add_param_obj( req, "capabilities");
     
+    // https://microsoft.github.io/language-server-protocol/specifications/lsp/3.17/specification/#initialize
+    
     
     json_object* clientInfo = jsonreq_add_param_obj( req, "clientInfo" );
     jsonreq_add_obj_str( clientInfo, "name",       "Geany");
