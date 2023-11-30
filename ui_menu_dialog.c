@@ -6,6 +6,7 @@
 #include "lsp.h"
 
 
+
     
 void copilot_menu_item_activate_cb(GtkMenuItem *menuitem, gpointer user_data)
 {
@@ -21,15 +22,15 @@ void copilot_menu_item_activate_cb(GtkMenuItem *menuitem, gpointer user_data)
     
     send_getVersion( version, runtimeVersion );
     
+   
     char show_text[1000];
+     
+    #if 0
+    
+   
     
     int off = 0;
-    
     off += snprintf( &show_text[off], sizeof(show_text) - off  , "Copilot Info\n\n");
-    
-    
-    
-    
     off += snprintf( &show_text[off], sizeof(show_text) - off  , "Signed in   : ");
     
     if ( signed_in == 1 ){
@@ -44,6 +45,47 @@ void copilot_menu_item_activate_cb(GtkMenuItem *menuitem, gpointer user_data)
         
     
     dialogs_show_msgbox(GTK_MESSAGE_INFO,"%s", show_text);
+    
+    #else
+    
+    GeanyPlugin *plugin = user_data;
+   
+    GtkWidget *window = plugin->geany_data->main_widgets->window;
+    
+    GtkWidget *dialog;
+	dialog = gtk_message_dialog_new(GTK_WINDOW(window), GTK_DIALOG_DESTROY_WITH_PARENT,	GTK_MESSAGE_INFO, GTK_BUTTONS_OK, "%s", "");
+	
+    int off = 0;
+    off += snprintf( &show_text[off], sizeof(show_text) - off  , "<b>Copilot Info</b>\n\n<tt>");
+    
+    off += snprintf( &show_text[off], sizeof(show_text) - off  , "Signed in : ");
+    
+    if ( signed_in == 1 ){
+        off += snprintf( &show_text[off], sizeof(show_text) - off  , "Yes\n");
+    }else{
+        off += snprintf( &show_text[off], sizeof(show_text) - off  , "No\n");
+    }
+    
+    off += snprintf( &show_text[off], sizeof(show_text) - off  , "Username  : %s\n", username);
+    off += snprintf( &show_text[off], sizeof(show_text) - off  , "Version   : %s\n", version);
+    off += snprintf( &show_text[off], sizeof(show_text) - off  , "Runtime   : %s\n</tt>", runtimeVersion);
+        
+    
+    //const gchar *secondary_text = "<tt>Dies ist der formatierte sekundäre Text des Dialogs.</tt>";
+
+    gtk_message_dialog_format_secondary_markup(GTK_MESSAGE_DIALOG(dialog), "%s", show_text);
+
+	
+    gtk_window_set_title(GTK_WINDOW(dialog), _("Information"));
+	gtk_window_set_icon_name(GTK_WINDOW(dialog), "geany");
+	gtk_widget_set_name(dialog, "GeanyDialog");
+
+	gtk_dialog_run(GTK_DIALOG(dialog));
+	gtk_widget_destroy(dialog);
+    
+    #endif
+    
+    
    
     
 }
