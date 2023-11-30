@@ -3,13 +3,17 @@
 #include <string.h>
 #include <stdarg.h>
 #include <unistd.h>
-
 #include <pthread.h>
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <fcntl.h>
 
 #include <geanyplugin.h>
 
 #include "jsonrpc.h"
 
+
+static int jsonrpc_log;
 
 static int next_id = 0;
 
@@ -25,12 +29,30 @@ static pthread_mutex_t copilot_api_result_mutex = PTHREAD_MUTEX_INITIALIZER;
 
 static json_object* last_result = 0;
 
+static int next_sync_no_log = 0;
 
 
 json_object* get_last_result( void ){
     return last_result;
 }
 
+
+void write_to_log( char* format, ... ){
+    
+    va_list arg;
+    
+    va_start(arg, format);
+    char buffer[vsnprintf(0, 0, format, arg)+1];
+    va_end(arg);
+
+    va_start(arg, format);
+    int len = vsprintf(buffer, format, arg);
+    va_end(arg);
+    
+    
+    write( jsonrpc_log, buffer, len + 1 );
+    
+}
 
 
 void lock_copilot_api_mutex( void ){
@@ -164,7 +186,7 @@ void jsonreq_add_obj_bool( json_object* json_obj , const char* name, const int v
 
 
 
-void jsonreq_send( json_object* ret_val, int async, int no_log ){
+static void jsonreq_send( json_object* ret_val, int async, int no_log ){
 
 
     json_object_object_add(ret_val,"jsonrpc",json_object_new_string("2.0"));
@@ -193,6 +215,12 @@ void jsonreq_send( json_object* ret_val, int async, int no_log ){
     write( copilot_stdin[1] , json_str, strlen( json_str ) );
     
     
+    if ( async == 1 ){
+        write_to_log( "--------------------------- send async  ----------------------------\n%s\n",   json_object_to_json_string_ext( ret_val, JSON_C_TO_STRING_PRETTY) );
+    }else{
+        write_to_log( "--------------------------- send sync %d   ----------------------------\n%s\n", next_id -1,  json_object_to_json_string_ext( ret_val, JSON_C_TO_STRING_PRETTY) );
+    }
+    
     if ( async == 0 ){
         pthread_mutex_lock(&copilot_api_result_mutex);
     }
@@ -210,11 +238,15 @@ void jsonreq_send_async( json_object* ret_val, int no_log ){
 
 void jsonreq_send_sync( json_object* ret_val, int no_log ){
     
+    next_sync_no_log = no_log;
+    
     jsonreq_send( ret_val , 0, no_log );
     
 }
 
 void jsonreq_send_sync_and_free( json_object* ret_val, int no_log ){
+    
+    next_sync_no_log = no_log;
     
     jsonreq_send( ret_val , 0, no_log );
     
@@ -343,13 +375,20 @@ void *copilot_read_thread(void *arg) {
         
             int id = json_object_get_int(id_obj);
             
-            printf("\033[01;31mrecv id %d\033[00m : %s\n", id, buffer );
+            if ( next_sync_no_log == 0 ){
+                printf("\033[01;31mrecv id %d\033[00m : %s\n", id, buffer );
+            }
+            
+            
+            write_to_log( "--------------------------- recv sync %d   ----------------------------\n%s\n", id,  json_object_to_json_string_ext( json_obj, JSON_C_TO_STRING_PRETTY) );
+    
             
             last_result = json_obj;
         
             pthread_mutex_unlock(&copilot_api_result_mutex);
         }else{
             
+            write_to_log( "--------------------------- recv async   ----------------------------\n%s\n",  json_object_to_json_string_ext( json_obj, JSON_C_TO_STRING_PRETTY) );
             
             handle_async_msg( json_obj, buffer );      
             
@@ -364,10 +403,22 @@ void *copilot_read_thread(void *arg) {
 }
 
 
-pid_t init_copilot_threads( char* engine_path  ){
+
+
+pid_t init_copilot_threads( GeanyPlugin *plugin, char* engine_path  ){
     
     pipe( copilot_stdin);
     pipe( copilot_stdout);
+    
+    
+    utils_mkdir( g_build_filename(plugin->geany_data->app->configdir, "plugins", "copilot", "log", NULL ), TRUE);
+    
+    jsonrpc_log = open( g_build_filename(plugin->geany_data->app->configdir, "plugins","copilot", "log", "jsonrpc.log", NULL ) , O_RDWR | O_CREAT, S_IRUSR | S_IWUSR );
+   
+    char start_log[1000];
+    sprintf( start_log, "---------------------------- json start ----------------------------\n");
+    write( jsonrpc_log, start_log, strlen( start_log ) );
+   
     
     //char* node_path = "/usr/bin/node";
     char* node_path = "/home/ramin/src/geany-copilot/node-v20.10.0-linux-x64/bin/node";

@@ -6,7 +6,7 @@
 
 
 
-pid_t init_copilot_threads( char* engine_path );
+pid_t init_copilot_threads( GeanyPlugin *plugin, char* engine_path );
 
 
 void lock_copilot_api_mutex( void );
