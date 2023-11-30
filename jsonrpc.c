@@ -17,6 +17,7 @@ static int jsonrpc_log;
 
 static int next_id = 0;
 
+static int copilot_engine_running_status = 0;
 
 static int copilot_stdin[2];
 static int copilot_stdout[2];
@@ -36,6 +37,9 @@ json_object* get_last_result( void ){
     return last_result;
 }
 
+int copilot_engine_running( void ){
+    return 1; // copilot_engine_running_status;
+}
 
 void write_to_log( char* format, ... ){
     
@@ -405,7 +409,7 @@ void *copilot_read_thread(void *arg) {
 
 
 
-pid_t init_copilot_threads( GeanyPlugin *plugin, char* engine_path  ){
+pid_t init_copilot_threads( GeanyPlugin *plugin, char* node_path,  char* engine_path  ){
     
     pipe( copilot_stdin);
     pipe( copilot_stdout);
@@ -419,9 +423,6 @@ pid_t init_copilot_threads( GeanyPlugin *plugin, char* engine_path  ){
     sprintf( start_log, "---------------------------- json start ----------------------------\n");
     write( jsonrpc_log, start_log, strlen( start_log ) );
    
-    
-    //char* node_path = "/usr/bin/node";
-    char* node_path = "/home/ramin/src/geany-copilot/node-v20.10.0-linux-x64/bin/node";
     
     
     char *start_cmd[] = { node_path , engine_path , NULL};
@@ -438,7 +439,7 @@ pid_t init_copilot_threads( GeanyPlugin *plugin, char* engine_path  ){
         
         //setenv("COPILOT_AGENT_VERBOSE", "1", 1);
         
-        
+        copilot_engine_running_status = 1;
         
         dup2( copilot_stdin[0],  0);
         dup2( copilot_stdout[1], 1);

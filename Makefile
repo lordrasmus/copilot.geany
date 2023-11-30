@@ -1,6 +1,6 @@
 SHELL=/bin/bash
 
-CFLAGS=-ggdb3 -fPIC `pkg-config --cflags geany` -Wall -Werror -Wswitch -MMD  #-fsanitize=address
+CFLAGS=-ggdb3 -fPIC `pkg-config --cflags geany` -Wall -Werror -Wswitch -Wno-deprecated-declarations  -MMD  #-fsanitize=address
 
 BUILD_DIR = build
 SRCS = $(wildcard *.c)
@@ -32,4 +32,4 @@ $(BUILD_DIR)/%.o: %.c
 	
 lib: $(OBJS)
 
-	gcc $(CFLAGS) $(OBJS) -o copilot.geany.so -shared `pkg-config --libs geany json-c` -lbsd
+	gcc $(CFLAGS) $(OBJS) -o copilot.geany.so -shared `pkg-config --libs geany json-c` -lbsd -lcurl

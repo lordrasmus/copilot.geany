@@ -3,7 +3,7 @@
 
 #include "lsp.h"
 #include "engines.h"
-
+#include "ui_menu_dialog.h"
 
 static GtkWidget *main_menu_item;
 
@@ -19,46 +19,15 @@ static GeanyPlugin *plugin_me;
  * 
  */
  
- static void getCompletions_func();
+static void getCompletions_func();
 
 
-static void item_activate_cb(GtkMenuItem *menuitem, gpointer user_data)
-{
-    
-    char version[100];
-    char runtimeVersion[100];
-    char username[100];
-    int signed_in;
-    
-    send_checkStatus( &signed_in, username, sizeof( username ) );
-    
-    send_getVersion( version, runtimeVersion );
-    
-    char show_text[1000];
-    
-    int off = 0;
-    
-    off += snprintf( &show_text[off], sizeof(show_text) - off  , "Copilot Info\n\n");
-    off += snprintf( &show_text[off], sizeof(show_text) - off  , "Signed in   : ");
-    
-    if ( signed_in == 1 ){
-        off += snprintf( &show_text[off], sizeof(show_text) - off  , "Yes\n");
-    }else{
-        off += snprintf( &show_text[off], sizeof(show_text) - off  , "No\n");
-    }
-    
-    off += snprintf( &show_text[off], sizeof(show_text) - off  , "Username : %s\n", username);
-    off += snprintf( &show_text[off], sizeof(show_text) - off  , "Version     : %s\n", version);
-    off += snprintf( &show_text[off], sizeof(show_text) - off  , "Runtime    : %s\n", runtimeVersion);
-        
-    
-    dialogs_show_msgbox(GTK_MESSAGE_INFO,"%s", show_text);
-    
-}
 
 
 static void on_document_open(GObject *obj, GeanyDocument *doc, gpointer user_data)
 {
+    
+    if ( copilot_engine_running() == 0 ) return;
     
     GeanyPlugin *plugin = user_data;
      
@@ -204,6 +173,8 @@ static void kb_run_completition(G_GNUC_UNUSED guint key_id){
 static gboolean on_editor_notify(GObject *object, GeanyEditor *editor, SCNotification *nt, gpointer data){
     //printf("on_editor_notify\n");
     
+    if ( copilot_engine_running() == 0 ) return FALSE;
+    
     GeanyPlugin *plugin = data;
     
      switch (nt->nmhdr.code)
@@ -306,6 +277,8 @@ static gboolean copilot_init(GeanyPlugin *plugin, gpointer pdata)
 {
     msgwin_status_add("Copilot: Hello World from copilot plugin!");
  
+ 
+    
     
     // Create a new menu item and show it
     main_menu_item = gtk_menu_item_new_with_mnemonic("Copilot");
@@ -316,14 +289,28 @@ static gboolean copilot_init(GeanyPlugin *plugin, gpointer pdata)
  
     // Connect the menu item with a callback function
     // which is called when the item is clicked
-    g_signal_connect(main_menu_item, "activate", G_CALLBACK(item_activate_cb), NULL);
+    g_signal_connect(main_menu_item, "activate", G_CALLBACK(copilot_menu_item_activate_cb), plugin);
     
     geany_plugin_set_data(plugin, plugin, NULL);
  
+    
+    char *node_version = "node-v20.10.0-linux-x64";
+    char *node_file    = "node-v20.10.0-linux-x64.tar.xz";
+    char *node_url     = "https://nodejs.org/download/release/v20.10.0/node-v20.10.0-linux-x64.tar.xz";
+    
+    char* node_path = g_build_filename(plugin->geany_data->app->configdir, "plugins", "copilot", "node" , NULL );
+    char* node_bin  = g_build_filename(plugin->geany_data->app->configdir, "plugins", "copilot", "node" , node_version, "bin", "node", NULL );
+    
+    printf("Copilot node path : %s\n", node_path );
+    if ( 0 != access( node_bin, R_OK ) ){    
+        copilot_node_download_dialog( plugin, node_file, node_path, node_url );
+    }
  
+    
+     
     engine_info* engines = get_engines( );
     
-    printf("Copilot Engine List: \n");
+    printf("Copilot engine list : \n");
     
     for ( int i = 0; engines[i].version != 0 ; i++ ){
         printf("  %s\n", engines[i].version );
@@ -331,16 +318,20 @@ static gboolean copilot_init(GeanyPlugin *plugin, gpointer pdata)
     
     engine_info* selectet_engine = &engines[0];
     
+    printf("Copilot engine used : %s\n", selectet_engine->version);
+    msgwin_msg_add(COLOR_BLACK, -1, NULL,"Copilot: init engine %s", selectet_engine->version  );
+    
+    
+    printf("Copilot engine extracting ... \n");fflush(stdout);
     engines_write_engine_files( plugin, selectet_engine );
+    printf("Copilot engine extracted\n");fflush(stdout);
+ 
  
     char engine_path[1024];
-    
     snprintf( engine_path, sizeof( engine_path ), "%s/index.js", engines_get_path( plugin, selectet_engine ));
     
     
-    msgwin_msg_add(COLOR_BLACK, -1, NULL,"Copilot: init engine %s", selectet_engine->version  );
-    
-    node_pid = init_copilot_threads( plugin, engine_path );
+    node_pid = init_copilot_threads( plugin, node_bin, engine_path );
     
     
     send_init_msg();
@@ -367,14 +358,18 @@ static PluginCallback copilot_callbacks[] =
  
 static void copilot_cleanup(GeanyPlugin *plugin, gpointer pdata)
 {
-    printf("Bye Copilot :-(\n");
+    
     
     GtkWidget *main_menu_item = (GtkWidget *) pdata;
     gtk_widget_destroy(main_menu_item);
     
-    
-    kill(node_pid, SIGTERM);
-    wait(NULL); 
+    if ( copilot_engine_running() == 1 ){
+        
+        printf("Bye Copilot :-(\n");
+        
+        kill(node_pid, SIGTERM);
+        wait(NULL); 
+    }
     
     
 }
