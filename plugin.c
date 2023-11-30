@@ -60,20 +60,20 @@ static void getCompletions_func(){
     
     long int version = (long)plugin_get_document_data( plugin , editor->document, "lsp_version");
         
-    char *suggestion = 0;
+    char *completition = 0;
     int start_line;
     int start_char;
     
-    send_getCompletions( DOC_FILENAME(editor->document), version, line , line_pos, indents->width , &suggestion, &start_line, &start_char );
+    send_getCompletions( DOC_FILENAME(editor->document), version, line , line_pos, indents->width , &completition, &start_line, &start_char );
     
     last_complitition_pos = pos;
     
-    if ( suggestion != 0 ){
+    if ( completition != 0 ){
         
-        int suggestion_len = strlen( suggestion );
-        int suggestion_add =0;
+        int completition_len = strlen( completition );
+        int completition_add =0;
         
-        printf("    suggestion   %d    : >%s<\n", suggestion_len , suggestion );
+        printf("    completition   %d    : >%s<\n", completition_len , completition );
         printf("    start_line: %d\n", start_line);
         printf("    start_char: %d\n", start_char);
         
@@ -85,29 +85,29 @@ static void getCompletions_func(){
         gint   len  = sci_get_length(doc->editor->sci) + 1;
         gchar* text = sci_get_contents(doc->editor->sci, len);
     
-        char *p = suggestion;
-        // sometimes the start of the suggestion is not the start of the line in the editor ( mostly 1 char ?? )
+        char *p = completition;
+        // sometimes the start of the completition is not the start of the line in the editor ( mostly 1 char ?? )
         char *cur = &text[ pos - line_pos - 1 ];
         
         //printf(" cur text : >%s\n", cur );
         
         if ( start_char == 0 ){
             
-            // this should find the first char in the current line which matches the suggestion
+            // this should find the first char in the current line which matches the completition
             for ( int i = 0; i < 5 ; i++ ){
-                if ( *suggestion == cur[i] ){
+                if ( *completition == cur[i] ){
                     cur = &cur[i];
                     printf( "   fixed cur text in editor position by %d bytes\n", i);
                     break;
                 }
             }
             
-            for( int i = 0 ; suggestion[i] == cur[i] ; i++ ){
+            for( int i = 0 ; completition[i] == cur[i] ; i++ ){
                 p++;
             }
         }
         
-        suggestion_len = strlen( p );
+        completition_len = strlen( p );
         
         
         // kleiner hack bis ich rausgefunden habe warum copilot da immer 2 tabs am anfang macht
@@ -119,27 +119,27 @@ static void getCompletions_func(){
         
         sci_start_undo_action( editor->sci );
         editor_insert_text_block( editor, p, pos, 0, -1, 0 );
-        //editor_insert_snippet( editor, pos, suggestion );
-        //editor_insert_snippet( editor, pos, suggestion );
+        //editor_insert_snippet( editor, pos, completition );
+        //editor_insert_snippet( editor, pos, completition );
         sci_end_undo_action( editor->sci );
         
         // kleiner hack weil der text select pro zeile um 1 zeichen zu kurz ist
-        /*for ( int i = 0 ; i < suggestion_len; i++ ){
-            if ( suggestion[i] == '\n' ){
-                suggestion_add++;
+        /*for ( int i = 0 ; i < completition_len; i++ ){
+            if ( completition[i] == '\n' ){
+                completition_add++;
             }
         } */
         
         #define SSM(s, m, w, l) scintilla_send_message(s, m, w, l)
-        SSM( editor->sci, SCI_SETSEL, pos + suggestion_len + suggestion_add , pos);
+        SSM( editor->sci, SCI_SETSEL, pos + completition_len + completition_add , pos);
         
     
-        free( suggestion );
+        free( completition );
     }else{
          msgwin_status_add("Copilot: no completition offered");
     }
     
-    //send_getPanelCompletions( DOC_FILENAME(editor->document), version, line , line_pos, indents->width , &suggestion );
+    //send_getPanelCompletions( DOC_FILENAME(editor->document), version, line , line_pos, indents->width , &completition );
     
    
 
