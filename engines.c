@@ -18,13 +18,13 @@ engine_info* get_engines( void ){
 
 char* engines_get_path( GeanyPlugin *plugin, engine_info* version ){
     
-    return g_build_filename(plugin->geany_data->app->configdir, "copilot", "engines", version->version, NULL );
+    return g_build_filename(plugin->geany_data->app->configdir, "plugins","copilot", "engines", version->version, NULL );
     
 }
 
 void engines_write_engine_files( GeanyPlugin *plugin, engine_info* version ){
 
-    const gchar *engine_path = g_build_filename(plugin->geany_data->app->configdir, "copilot", "engines", NULL );
+    const gchar *engine_path = g_build_filename(plugin->geany_data->app->configdir,"plugins", "copilot", "engines", NULL );
     utils_mkdir(engine_path, TRUE);
     
     mz_zip_archive zip;
