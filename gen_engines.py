@@ -13,9 +13,17 @@ for e in engines:
     
     print( "Version : " + e )
     
-    if not os.path.exists( "copilot-" + e + ".zip" ):
-        os.system("cd engines ; zip -r -9  ../copilot-" + e + ".zip " + e + " ")
+    cur_dir = os.getcwd()
     
+    
+    
+    if not os.path.exists( "copilot-" + e + ".zip" ):
+        os.chdir( "engines")
+        cmd="zip -r -9  ../copilot-" + e + ".zip " + e + " "
+        print( cmd )
+        os.system(cmd)
+    
+        os.chdir( cur_dir )
         os.system("xxd -i copilot-" + e + ".zip copilot-" + e + ".h")
 
 
