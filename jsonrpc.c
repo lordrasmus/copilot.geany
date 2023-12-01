@@ -18,9 +18,12 @@ static int jsonrpc_log;
 static int next_id = 0;
 
 
-static int copilot_stdin[2];
-static int copilot_stdout[2];
+//static int copilot_stdin[2];
+//static int copilot_stdout[2];
 
+//static GIOStream *stream;
+GInputStream *input_stream;
+GOutputStream *output_stream;
 
 
 static pthread_mutex_t copilot_api_send_mutex = PTHREAD_MUTEX_INITIALIZER;
@@ -212,8 +215,22 @@ static void jsonreq_send( json_object* ret_val, int async, int no_log ){
     header_len = sprintf( header_buffer, "Content-Length: %lld\r\nContent-Type: application/vscode-jsonrpc; charset=utf-8\r\n\r\n", strlen( json_str ) );
     
     
-    write( copilot_stdin[1] , header_buffer, header_len );
-    write( copilot_stdin[1] , json_str, strlen( json_str ) );
+    //write( copilot_stdin[1] , header_buffer, header_len );
+    //write( copilot_stdin[1] , json_str, strlen( json_str ) );
+    
+    GError *error = NULL;
+    
+    g_output_stream_write(output_stream, header_buffer, header_len, NULL, &error);
+    g_output_stream_write(output_stream, json_str, strlen( json_str ), NULL, &error);
+    
+    
+    /*if ((bytes_written = g_output_stream_write(output_stream, data_to_write, data_size, NULL, &error)) == -1) {
+        // Fehler beim Schreiben
+        g_print("Error writing to stdin: %s\n", error->message);
+        g_error_free(error);
+    } else {
+        // Schreiben erfolgreich
+    }*/
     
     
     if ( async == 1 ){
@@ -335,11 +352,17 @@ void *copilot_read_thread(void *arg) {
     char buffer[10000];
     
     char req_end[4] = { 13,10,13,10};
+    
+    GError *error = NULL;
 
     while(1){
         // Lese Daten vom Dateideskriptor
-        ssize_t bytesRead = read( copilot_stdout[0], buffer, 16);
+        //ssize_t bytesRead = read( copilot_stdout[0], buffer, 16);
+        
+        ssize_t bytesRead = g_input_stream_read(input_stream, buffer, 16, NULL, &error);
         buffer[bytesRead] = 0;
+        
+        //printf("read %ld\n", bytesRead );
         
         if ( 0 != memcmp("Content-Length: ", buffer, 16 ) ){
             printf("Copilot Protokoll Error: not Content-Length  got : >%s< \n",buffer );
@@ -348,7 +371,10 @@ void *copilot_read_thread(void *arg) {
         
         int buffer_off = 0;
         while( buffer_off < 200 ){
-            read( copilot_stdout[0], &buffer[ buffer_off ], 1);
+            
+            g_input_stream_read(input_stream, &buffer[ buffer_off ], 1, NULL, &error);
+            
+            //read( copilot_stdout[0], &buffer[ buffer_off ], 1);
             //printf("c: %c ( %d )  %d\n", buffer[ buffer_off ], buffer[ buffer_off ],buffer_off  );
             
             if ( 0 == memcmp( req_end, &buffer[ buffer_off -3 ], 4 ) ){
@@ -359,7 +385,8 @@ void *copilot_read_thread(void *arg) {
         }
         
         int Content_Length = atoi( buffer );
-        read( copilot_stdout[0], buffer, Content_Length);
+        //read( copilot_stdout[0], buffer, Content_Length);
+        g_input_stream_read(input_stream, buffer, Content_Length, NULL, &error);
         buffer[ Content_Length ] = 0;
         
         
@@ -405,11 +432,14 @@ void *copilot_read_thread(void *arg) {
 
 
 
+static void process_stopped(GObject *source_object, GAsyncResult *res, gpointer data){
+        printf("process_stopped\n");
+}
 
-pid_t init_copilot_threads( GeanyPlugin *plugin, char* node_path,  char* engine_path  ){
+GSubprocess* init_copilot_threads( GeanyPlugin *plugin, char* node_path,  char* engine_path  ){
     
-    pipe( copilot_stdin);
-    pipe( copilot_stdout);
+    //pipe( copilot_stdin);
+    //pipe( copilot_stdout);
     
     
     utils_mkdir( g_build_filename(plugin->geany_data->app->configdir, "plugins", "copilot", "log", NULL ), TRUE);
@@ -421,7 +451,7 @@ pid_t init_copilot_threads( GeanyPlugin *plugin, char* node_path,  char* engine_
     write( jsonrpc_log, start_log, strlen( start_log ) );
    
     
-    
+    /*
     char *start_cmd[] = { node_path , engine_path , NULL};
     
 
@@ -453,8 +483,43 @@ pid_t init_copilot_threads( GeanyPlugin *plugin, char* node_path,  char* engine_
     if (pthread_create(&my_thread, NULL, copilot_read_thread, NULL) != 0) {
         fprintf(stderr, "Error creating thread\n");
         exit(EXIT_FAILURE);
+    }*/
+    
+    
+    pthread_mutex_lock(&copilot_api_result_mutex);
+     
+    GSubprocess *process;
+	
+    
+    GError *error = NULL;
+    GeanyFiletypeID filetype_id = GEANY_FILETYPES_C;
+    
+    gint flags = G_SUBPROCESS_FLAGS_STDIN_PIPE | G_SUBPROCESS_FLAGS_STDOUT_PIPE;
+    
+    gchar ** argv;
+    
+    char cmd[1000];
+    sprintf( cmd, "%s %s", node_path, engine_path );
+    
+    argv = g_strsplit_set( cmd, " ", -1);
+    
+    process = g_subprocess_newv((const gchar * const *)argv, flags, &error);
+    
+    g_subprocess_wait_async( process, NULL, process_stopped, GINT_TO_POINTER(filetype_id));
+
+	input_stream = g_subprocess_get_stdout_pipe( process);
+	output_stream = g_subprocess_get_stdin_pipe( process);
+	//stream = g_simple_io_stream_new(input_stream, output_stream);
+    
+    printf("started\n");
+    
+     pthread_t my_thread; // Thread identifier
+    if (pthread_create(&my_thread, NULL, copilot_read_thread, NULL) != 0) {
+        fprintf(stderr, "Error creating thread\n");
+        exit(EXIT_FAILURE);
     }
     
-    return pid;
+    
+    return process;
     
 }

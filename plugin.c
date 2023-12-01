@@ -7,7 +7,7 @@
 
 static GtkWidget *main_menu_item;
 
-static pid_t node_pid;
+static GSubprocess* node_process;
 
 
 static GeanyPlugin *plugin_me;
@@ -328,7 +328,7 @@ static gboolean copilot_init(GeanyPlugin *plugin, gpointer pdata)
     snprintf( engine_path, sizeof( engine_path ), "%s/index.js", engines_get_path( plugin, selectet_engine ));
     
     
-    node_pid = init_copilot_threads( plugin, node_bin, engine_path );
+    node_process = init_copilot_threads( plugin, node_bin, engine_path );
     
     
     send_init_msg();
@@ -363,8 +363,11 @@ static void copilot_cleanup(GeanyPlugin *plugin, gpointer pdata)
         
     printf("Bye Copilot :-(\n");
         
-    kill(node_pid, SIGTERM);
-    wait(NULL); 
+    //kill(node_pid, SIGTERM);
+    //wait(NULL); 
+    
+    g_subprocess_force_exit( node_process );
+    g_object_unref(node_process);  // Freigabe des Prozessobjekts
     
 }
 

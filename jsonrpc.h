@@ -5,7 +5,7 @@
 #include <json-c/json.h>
 
 
-pid_t init_copilot_threads( GeanyPlugin *plugin, char* node_bin, char* engine_path );
+GSubprocess* init_copilot_threads( GeanyPlugin *plugin, char* node_bin, char* engine_path );
 
 
 void lock_copilot_api_mutex( void );
