@@ -91,6 +91,7 @@ void copilot_menu_item_activate_cb(GtkMenuItem *menuitem, gpointer user_data)
 }
 
 
+#ifndef __MINGW32__
 
 
 typedef struct {
@@ -235,7 +236,7 @@ void copilot_node_download_dialog(GeanyPlugin *plugin , char* node_file, char* n
     while (gtk_events_pending()) {
            gtk_main_iteration();
     }
-    sleep(1);
+    //sleep(1);
     char cmd[2000];
     sprintf( cmd, "tar -xaf %s/%s -C %s", node_path, node_file, node_path);
     //printf("cmd : %s\n", cmd );
@@ -252,4 +253,6 @@ void copilot_node_download_dialog(GeanyPlugin *plugin , char* node_file, char* n
     
     
 }
+
+#endif
 

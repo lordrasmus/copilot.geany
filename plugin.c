@@ -1,4 +1,5 @@
 
+#include <unistd.h>
 #include <geanyplugin.h>
 
 #include "lsp.h"
@@ -22,6 +23,10 @@ static GeanyPlugin *plugin_me;
 static void getCompletions_func();
 
 
+typedef struct{
+    uint64_t doc_version;
+} copilot_doc_data;
+
 
 
 static void on_document_open(GObject *obj, GeanyDocument *doc, gpointer user_data)
@@ -31,8 +36,11 @@ static void on_document_open(GObject *obj, GeanyDocument *doc, gpointer user_dat
      
     gint   len  = sci_get_length(doc->editor->sci) + 1;
     gchar* text = sci_get_contents(doc->editor->sci, len);
+    
+    copilot_doc_data* data = malloc( sizeof( copilot_doc_data ) );
+    memset( data, 0 , sizeof( copilot_doc_data ) );
         
-    plugin_set_document_data( plugin , doc, "lsp_version", 0 );
+    plugin_set_document_data( plugin , doc, "copilot-doc-data", data );
     
     send_textDocument_didOpen( DOC_FILENAME(doc) , text );
     
@@ -58,13 +66,13 @@ static void getCompletions_func(){
         return;
     }
     
-    long int version = (long)plugin_get_document_data( plugin , editor->document, "lsp_version");
+    copilot_doc_data* data = plugin_get_document_data( plugin , editor->document, "copilot-doc-data");
         
     char *completition = 0;
     int start_line;
     int start_char;
     
-    send_getCompletions( DOC_FILENAME(editor->document), version, line , line_pos, indents->width , &completition, &start_line, &start_char );
+    send_getCompletions( DOC_FILENAME(editor->document), data->doc_version, line , line_pos, indents->width , &completition, &start_line, &start_char );
     
     last_complitition_pos = pos;
     
@@ -246,16 +254,16 @@ static gboolean on_editor_notify(GObject *object, GeanyEditor *editor, SCNotific
                     gint   len  = sci_get_length( editor->sci) + 1;
                     gchar* text = sci_get_contents( editor->sci, len);
                     
-                    long int version = (long)plugin_get_document_data( plugin , editor->document, "lsp_version");
-                    version++;
+                    copilot_doc_data* data  = plugin_get_document_data( plugin , editor->document, "copilot-doc-data");
+                    data->doc_version++;
                     
-                    plugin_set_document_data( plugin , editor->document, "lsp_version", (gpointer*)version );
+                    
                     
                     //printf("version : %ld\n", version );
                     
                     //send_textDocument_didChange( DOC_FILENAME(editor->document), version, line, line_pos, mod_text );
                     
-                    send_textDocument_didChange( DOC_FILENAME(editor->document), version, line, line_pos, text );
+                    send_textDocument_didChange( DOC_FILENAME(editor->document), data->doc_version, line, line_pos, text );
                     
                     copilot_completition_marker = 15;
                     
@@ -292,16 +300,21 @@ static gboolean copilot_init(GeanyPlugin *plugin, gpointer pdata)
  
     
     char *node_version = "node-v20.10.0-linux-x64";
-    char *node_file    = "node-v20.10.0-linux-x64.tar.xz";
-    char *node_url     = "https://nodejs.org/download/release/v20.10.0/node-v20.10.0-linux-x64.tar.xz";
+    
     
     char* node_path = g_build_filename(plugin->geany_data->app->configdir, "plugins", "copilot", "node" , NULL );
     char* node_bin  = g_build_filename(plugin->geany_data->app->configdir, "plugins", "copilot", "node" , node_version, "bin", "node", NULL );
     
     printf("Copilot node path : %s\n", node_path );
+    
+    #ifndef __MINGW32__
     if ( 0 != access( node_bin, R_OK ) ){    
+        char *node_file    = "node-v20.10.0-linux-x64.tar.xz";
+        char *node_url     = "https://nodejs.org/download/release/v20.10.0/node-v20.10.0-linux-x64.tar.xz";
+    
         copilot_node_download_dialog( plugin, node_file, node_path, node_url );
     }
+    #endif
  
     
      

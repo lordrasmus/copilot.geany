@@ -4,6 +4,8 @@
 
 void copilot_menu_item_activate_cb(GtkMenuItem *menuitem, gpointer user_data);
 
+#ifndef __MINGW32__
 void copilot_node_download_dialog(GeanyPlugin *plugin, char* node_version, char* node_path, char* node_url );
+#endif
 
 #endif
