@@ -212,7 +212,9 @@ static void jsonreq_send( json_object* ret_val, int async, int no_log ){
         }
     }
         
-    header_len = sprintf( header_buffer, "Content-Length: %lld\r\nContent-Type: application/vscode-jsonrpc; charset=utf-8\r\n\r\n", strlen( json_str ) );
+    long json_len = strlen( json_str );
+    
+    header_len = sprintf( header_buffer, "Content-Length: %ld\r\nContent-Type: application/vscode-jsonrpc; charset=utf-8\r\n\r\n",json_len );
     
     
     //write( copilot_stdin[1] , header_buffer, header_len );
