@@ -40,6 +40,7 @@ static void on_document_open(GObject *obj, GeanyDocument *doc, gpointer user_dat
     copilot_doc_data* data = malloc( sizeof( copilot_doc_data ) );
     memset( data, 0 , sizeof( copilot_doc_data ) );
         
+    printf("set doc data: %s  %p\n", doc->file_name, data );
     plugin_set_document_data( plugin , doc, "copilot-doc-data", data );
     
     send_textDocument_didOpen( DOC_FILENAME(doc) , text );
@@ -255,6 +256,7 @@ static gboolean on_editor_notify(GObject *object, GeanyEditor *editor, SCNotific
                     gchar* text = sci_get_contents( editor->sci, len);
                     
                     copilot_doc_data* data  = plugin_get_document_data( plugin , editor->document, "copilot-doc-data");
+                    printf("doc data: %s %p\n",editor->document->file_name,  data );
                     data->doc_version++;
                     
                     
