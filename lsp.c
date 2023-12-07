@@ -241,7 +241,7 @@ void send_getCompletions( const char* path, int version, int line, int character
     jsonreq_add_obj_int(textDocument,"version", version);
     
     
-    jsonreq_send_sync( ret_val, 0 );
+    jsonreq_send_sync( ret_val, 1 );
     
     *suggestion = 0;
     

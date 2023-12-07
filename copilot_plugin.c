@@ -82,13 +82,19 @@ static void getCompletions_func(){
         int completition_len = strlen( completition );
         int completition_add =0;
         
+        //#define COMP_DEBUG
+        
         printf("    completition   %d    : >%s<\n", completition_len , completition );
+        
+        #ifdef COMP_DEBUG
+        
         printf("    start_line: %d\n", start_line);
         printf("    start_char: %d\n", start_char);
         
         printf("    line    : %d\n", line);
         printf("    pos     : %d\n", pos);
         printf("    line_pos: %d\n", line_pos);
+        #endif
         
         
         gint   len  = sci_get_length(doc->editor->sci) + 1;
@@ -96,35 +102,57 @@ static void getCompletions_func(){
     
         char *p = completition;
         // sometimes the start of the completition is not the start of the line in the editor ( mostly 1 char ?? )
-        char *cur = &text[ pos - line_pos - 1 ];
+        char *cur = &text[ pos - line_pos  ];
         
-        //printf(" cur text : >%s\n", cur );
+        char cur_text[100];
+        memset( cur_text, 0 , sizeof( cur_text ) );
+        for( int i = 0; cur[i] != '\n' ; i++ ){
+            cur_text[i] = cur[i];
+            #ifdef COMP_DEBUG
+            printf("  copy -> cur %d\n", cur[i] );
+            #endif
+        }
+        
+        #ifdef COMP_DEBUG
+        printf(" cur text : >%s< %ld\n", cur_text, strlen( cur_text ) );
+        #endif
         
         if ( start_char == 0 ){
             
             // this should find the first char in the current line which matches the completition
-            for ( int i = 0; i < 5 ; i++ ){
+            for ( int i = 0; i < strlen( cur_text ) ; i++ ){
                 if ( *completition == cur[i] ){
                     cur = &cur[i];
                     printf( "   fixed cur text in editor position by %d bytes\n", i);
                     break;
                 }
             }
+            #ifdef COMP_DEBUG
+            printf(" comp : %d\n", completition[0]);
+            printf(" cur  : %d\n", cur[0]);
+            #endif
             
+            int off = 0;
             for( int i = 0 ; completition[i] == cur[i] ; i++ ){
                 p++;
+                off++;
             }
+            
+            #ifdef COMP_DEBUG
+            printf("off: %d\n", off );
+            #endif
         }
-        
-        completition_len = strlen( p );
         
         
         // kleiner hack bis ich rausgefunden habe warum copilot da immer 2 tabs am anfang macht
-        /*while( 1 ){
+        while( 1 ){
             if ( *p == ' ' ){ p++ ; continue; }
             if ( *p == '\t' ){ p++ ; continue; }
             break;
-        }*/
+        }
+        
+        
+        completition_len = strlen( p );
         
         sci_start_undo_action( editor->sci );
         editor_insert_text_block( editor, p, pos, 0, -1, 0 );
