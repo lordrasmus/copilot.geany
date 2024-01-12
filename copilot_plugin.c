@@ -284,7 +284,24 @@ static gboolean on_editor_notify(GObject *object, GeanyEditor *editor, SCNotific
                     gchar* text = sci_get_contents( editor->sci, len);
                     
                     copilot_doc_data* data  = plugin_get_document_data( plugin , editor->document, "copilot-doc-data");
-                    printf("doc data: %s %p\n",editor->document->file_name,  data );
+                    //printf("doc data: %s %p\n",editor->document->file_name,  data );
+                    if ( editor == 0 ){
+                        printf("on_editor_notify: editor is 0\n");
+                        return FALSE;
+                    }
+                    if ( editor->document == 0 ){ 
+                        printf("on_editor_notify: editor->document is 0\n");
+                        return FALSE;; 
+                    }
+                    if ( editor->document->file_name == 0 ){
+                        printf("on_editor_notify: editor->document->file_name is 0\n");
+                        return FALSE;;
+                    }
+                    if ( data == 0 ){
+                        printf("on_editor_notify: data is 0\n");
+                        return FALSE;;
+                    }
+                    
                     data->doc_version++;
                     
                     
